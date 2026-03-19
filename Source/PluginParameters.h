@@ -9,8 +9,9 @@ namespace ParamIDs
     inline constexpr auto playbackMode  = "playbackMode";
     inline constexpr auto loopStart     = "loopStart";
     inline constexpr auto loopEnd       = "loopEnd";
-    inline constexpr auto loopCrossfade = "loopCrossfade";
-    inline constexpr auto rootNote      = "rootNote";
+    inline constexpr auto loopCrossfade  = "loopCrossfade";
+    inline constexpr auto loopSnapToZero = "loopSnapToZero";
+    inline constexpr auto rootNote       = "rootNote";
 
     // ADSR Envelope
     inline constexpr auto attack  = "attack";
@@ -68,6 +69,9 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ParamIDs::loopCrossfade, 1}, "Loop Crossfade",
         juce::NormalisableRange<float>(0.0f, 500.0f, 0.1f, 0.5f), 20.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID{ParamIDs::loopSnapToZero, 1}, "Snap to Zero", true));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(
         juce::ParameterID{ParamIDs::rootNote, 1}, "Root Note",

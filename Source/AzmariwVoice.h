@@ -31,7 +31,8 @@ public:
     void setLoopParameters(std::atomic<float>* playbackMode,
                            std::atomic<float>* loopStart,
                            std::atomic<float>* loopEnd,
-                           std::atomic<float>* loopCrossfade);
+                           std::atomic<float>* loopCrossfade,
+                           std::atomic<float>* loopSnapToZero);
 
     void prepareToPlay(double sampleRate);
 
@@ -58,6 +59,14 @@ private:
     std::atomic<float>* loopStartParam = nullptr;
     std::atomic<float>* loopEndParam = nullptr;
     std::atomic<float>* loopCrossfadeParam = nullptr;
+    std::atomic<float>* loopSnapToZeroParam = nullptr;
+
+    // Cached snapped loop points to avoid searching every audio block
+    float cachedLoopStartNorm = -1.0f;
+    float cachedLoopEndNorm = -1.0f;
+    bool cachedSnapEnabled = false;
+    int snappedLoopStartAbs = 0;
+    int snappedLoopEndAbs = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AzmariwVoice)
 };

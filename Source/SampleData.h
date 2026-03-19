@@ -22,6 +22,10 @@ public:
     const juce::String& getFilePath() const { return filePath; }
     bool isLoaded() const { return buffer.getNumSamples() > 0; }
 
+    /** Search outward from sampleIndex for the nearest zero-crossing.
+        Returns the original index if none found within searchRadius. */
+    int findNearestZeroCrossing(int sampleIndex, int searchRadius = 512) const;
+
 private:
     juce::AudioBuffer<float> buffer;
     double sourceSampleRate = 44100.0;

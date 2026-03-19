@@ -11,6 +11,8 @@ public:
 
     void setSampleData(const SampleData* sample);
     void setLoopParameters(float loopStartNorm, float loopEndNorm, float crossfadeMs);
+    void setSnapEnabled(bool enabled);
+    void setSnappedPositions(float snappedStartNorm, float snappedEndNorm);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -26,6 +28,9 @@ private:
     float loopStart = 0.0f;
     float loopEnd = 1.0f;
     float crossfadeMs = 20.0f;
+    bool snapEnabled = false;
+    float snappedStart = 0.0f;
+    float snappedEnd = 1.0f;
 
     // Cached thumbnail data for efficient drawing
     std::vector<float> waveformPeaks;
