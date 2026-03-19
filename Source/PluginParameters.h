@@ -7,6 +7,9 @@ namespace ParamIDs
     // Sampler
     inline constexpr auto sampleSlot    = "sampleSlot";
     inline constexpr auto playbackMode  = "playbackMode";
+    inline constexpr auto loopStart     = "loopStart";
+    inline constexpr auto loopEnd       = "loopEnd";
+    inline constexpr auto loopCrossfade = "loopCrossfade";
     inline constexpr auto rootNote      = "rootNote";
 
     // ADSR Envelope
@@ -53,6 +56,18 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         juce::ParameterID{ParamIDs::playbackMode, 1}, "Playback Mode",
         juce::StringArray{"One Shot", "Loop"}, 0));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{ParamIDs::loopStart, 1}, "Loop Start",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{ParamIDs::loopEnd, 1}, "Loop End",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f), 1.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{ParamIDs::loopCrossfade, 1}, "Loop Crossfade",
+        juce::NormalisableRange<float>(0.0f, 500.0f, 0.1f, 0.5f), 20.0f));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(
         juce::ParameterID{ParamIDs::rootNote, 1}, "Root Note",

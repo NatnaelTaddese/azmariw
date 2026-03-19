@@ -28,13 +28,22 @@ public:
     void setGlideParameters(std::atomic<float>* enabled,
                             std::atomic<float>* time);
 
+    void setLoopParameters(std::atomic<float>* playbackMode,
+                           std::atomic<float>* loopStart,
+                           std::atomic<float>* loopEnd,
+                           std::atomic<float>* loopCrossfade);
+
     void prepareToPlay(double sampleRate);
 
 private:
+    float getInterpolatedSample(const juce::AudioBuffer<float>& buffer,
+                                int channel, double position, int numSamples) const;
+
     double playbackPosition = 0.0;
     float velocity = 0.0f;
     int lastPlayedNote = -1;
     bool noteWasPlaying = false;
+    bool hasCompletedFirstPass = false;
 
     AdsrEnvelope adsrEnvelope;
     GlideProcessor glideProcessor;
@@ -45,6 +54,10 @@ private:
     std::atomic<float>* releaseParam = nullptr;
     std::atomic<float>* glideEnabledParam = nullptr;
     std::atomic<float>* glideTimeParam = nullptr;
+    std::atomic<float>* playbackModeParam = nullptr;
+    std::atomic<float>* loopStartParam = nullptr;
+    std::atomic<float>* loopEndParam = nullptr;
+    std::atomic<float>* loopCrossfadeParam = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AzmariwVoice)
 };

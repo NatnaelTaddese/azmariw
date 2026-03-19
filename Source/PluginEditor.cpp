@@ -5,7 +5,7 @@
 AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    setSize(820, 520);
+    setSize(1020, 520);
 
     // Group components
     samplerGroup.setText("Sampler");
@@ -56,6 +56,13 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
     setupRotaryKnob(rootNoteKnob, rootNoteLabel, "Root Note");
     rootNoteKnob.setNumDecimalPlacesToDisplay(0);
 
+    // Loop controls
+    loopGroup.setText("Loop");
+    addAndMakeVisible(loopGroup);
+    setupRotaryKnob(loopStartKnob, loopStartLabel, "Start");
+    setupRotaryKnob(loopEndKnob, loopEndLabel, "End");
+    setupRotaryKnob(loopCrossfadeKnob, loopCrossfadeLabel, "Fade");
+
     // ADSR knobs
     setupRotaryKnob(attackKnob, attackLabel, "Attack");
     setupRotaryKnob(decayKnob, decayLabel, "Decay");
@@ -95,6 +102,13 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
         audioProcessor.apvts, ParamIDs::playbackMode, playbackModeBox);
     rootNoteAttachment = std::make_unique<SliderAttachment>(
         audioProcessor.apvts, ParamIDs::rootNote, rootNoteKnob);
+
+    loopStartAttachment = std::make_unique<SliderAttachment>(
+        audioProcessor.apvts, ParamIDs::loopStart, loopStartKnob);
+    loopEndAttachment = std::make_unique<SliderAttachment>(
+        audioProcessor.apvts, ParamIDs::loopEnd, loopEndKnob);
+    loopCrossfadeAttachment = std::make_unique<SliderAttachment>(
+        audioProcessor.apvts, ParamIDs::loopCrossfade, loopCrossfadeKnob);
 
     attackAttachment = std::make_unique<SliderAttachment>(
         audioProcessor.apvts, ParamIDs::attack, attackKnob);
@@ -202,8 +216,9 @@ void AzmariwAudioProcessorEditor::resized()
     auto topRow = bounds.removeFromTop(220);
     auto bottomRow = bounds.reduced(0, 4);
 
-    // Top row: Sampler | ADSR | Glide
+    // Top row: Sampler | Loop | ADSR | Glide
     auto samplerArea = topRow.removeFromLeft(240).reduced(4);
+    auto loopArea = topRow.removeFromLeft(200).reduced(4);
     auto adsrArea = topRow.removeFromLeft(340).reduced(4);
     auto glideArea = topRow.reduced(4);
 
@@ -243,6 +258,22 @@ void AzmariwAudioProcessorEditor::resized()
     rootNoteKnob.setBounds(rootKnobArea);
     rootNoteLabel.setBounds(rootKnobArea.getX(), rootKnobArea.getBottom(),
                             rootKnobArea.getWidth(), 18);
+
+    // --- Loop section layout ---
+    loopGroup.setBounds(loopArea);
+    auto loopInner = loopArea.reduced(10).withTrimmedTop(15);
+    int loopKnobWidth = loopInner.getWidth() / 3;
+    int loopLabelH = 18;
+
+    auto loopLabelRow = loopInner.removeFromTop(loopLabelH);
+    loopStartLabel.setBounds(loopLabelRow.removeFromLeft(loopKnobWidth));
+    loopEndLabel.setBounds(loopLabelRow.removeFromLeft(loopKnobWidth));
+    loopCrossfadeLabel.setBounds(loopLabelRow);
+
+    auto loopKnobRow = loopInner;
+    loopStartKnob.setBounds(loopKnobRow.removeFromLeft(loopKnobWidth).reduced(2));
+    loopEndKnob.setBounds(loopKnobRow.removeFromLeft(loopKnobWidth).reduced(2));
+    loopCrossfadeKnob.setBounds(loopKnobRow.reduced(2));
 
     // --- ADSR section layout ---
     auto adsrInner = adsrArea.reduced(10).withTrimmedTop(15);
