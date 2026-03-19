@@ -67,7 +67,8 @@ private:
     std::atomic<float>* driveLowParam = nullptr;
     std::atomic<float>* driveMidParam = nullptr;
     std::atomic<float>* driveHighParam = nullptr;
-    std::atomic<float>* distortionMixParam = nullptr;
+    std::atomic<float>* distortionMixParam  = nullptr;
+    std::atomic<float>* distortionTypeParam = nullptr;
     std::atomic<float>* postEqFreqParam = nullptr;
     std::atomic<float>* postEqGainParam = nullptr;
     std::atomic<float>* postEqQParam = nullptr;

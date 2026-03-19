@@ -92,6 +92,20 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
     setupRotaryKnob(preEqGainKnob, preEqGainLabel, "Gain");
     setupRotaryKnob(preEqQKnob, preEqQLabel, "Q");
 
+    // Distortion type selector
+    distortionTypeLabel.setText("Type", juce::dontSendNotification);
+    distortionTypeLabel.setJustificationType(juce::Justification::centredRight);
+    distortionTypeLabel.setFont(juce::Font(juce::FontOptions(12.0f)));
+    addAndMakeVisible(distortionTypeLabel);
+
+    distortionTypeBox.addItem("Soft", 1);
+    distortionTypeBox.addItem("Tube", 2);
+    distortionTypeBox.addItem("Hard", 3);
+    distortionTypeBox.addItem("Amp",  4);
+    distortionTypeBox.addItem("Fuzz", 5);
+    distortionTypeBox.addItem("Fold", 6);
+    addAndMakeVisible(distortionTypeBox);
+
     // Distortion knobs
     setupRotaryKnob(crossoverLowMidKnob, crossoverLowMidLabel, "X Low");
     setupRotaryKnob(crossoverMidHighKnob, crossoverMidHighLabel, "X High");
@@ -158,6 +172,8 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
         audioProcessor.apvts, ParamIDs::driveHigh, driveHighKnob);
     distortionMixAttachment = std::make_unique<SliderAttachment>(
         audioProcessor.apvts, ParamIDs::distortionMix, distortionMixKnob);
+    distortionTypeAttachment = std::make_unique<ComboBoxAttachment>(
+        audioProcessor.apvts, ParamIDs::distortionType, distortionTypeBox);
 
     postEqFreqAttachment = std::make_unique<SliderAttachment>(
         audioProcessor.apvts, ParamIDs::postEqFrequency, postEqFreqKnob);
@@ -372,6 +388,13 @@ void AzmariwAudioProcessorEditor::resized()
 
     // --- Distortion section layout ---
     auto distInner = distortionArea.reduced(10).withTrimmedTop(15);
+
+    // Type selector row at top
+    auto distTypeRow = distInner.removeFromTop(22);
+    distortionTypeLabel.setBounds(distTypeRow.removeFromLeft(35));
+    distortionTypeBox.setBounds(distTypeRow.reduced(2, 0));
+    distInner.removeFromTop(4);
+
     int distKnobWidth = distInner.getWidth() / 6;
 
     auto distLabelRow = distInner.removeFromTop(adsrLabelH);
