@@ -107,12 +107,36 @@ void AzmariwVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     float loopStartNorm = (loopStartParam != nullptr) ? loopStartParam->load() : 0.0f;
     float loopEndNorm = (loopEndParam != nullptr) ? loopEndParam->load() : 1.0f;
     float crossfadeMs = (loopCrossfadeParam != nullptr) ? loopCrossfadeParam->load() : 20.0f;
+    bool snapEnabled = (loopSnapToZeroParam != nullptr && loopSnapToZeroParam->load() >= 0.5f);
 
     // Convert normalized positions to absolute sample indices
     int loopStartAbs = static_cast<int>(loopStartNorm * sampleLength);
     int loopEndAbs = static_cast<int>(loopEndNorm * sampleLength);
     loopStartAbs = juce::jlimit(0, sampleLength - 1, loopStartAbs);
     loopEndAbs = juce::jlimit(loopStartAbs + 1, sampleLength, loopEndAbs);
+
+    // Apply zero-crossing snap (cached — only recompute when params change)
+    if (snapEnabled && loopEnabled)
+    {
+        if (loopStartNorm != cachedLoopStartNorm || loopEndNorm != cachedLoopEndNorm || snapEnabled != cachedSnapEnabled)
+        {
+            cachedLoopStartNorm = loopStartNorm;
+            cachedLoopEndNorm = loopEndNorm;
+            cachedSnapEnabled = snapEnabled;
+            snappedLoopStartAbs = sampleData->findNearestZeroCrossing(loopStartAbs);
+            snappedLoopEndAbs = sampleData->findNearestZeroCrossing(loopEndAbs);
+            // Ensure snapped end is still after snapped start
+            if (snappedLoopEndAbs <= snappedLoopStartAbs)
+                snappedLoopEndAbs = loopEndAbs; // fall back to unsnapped
+        }
+        loopStartAbs = snappedLoopStartAbs;
+        loopEndAbs = snappedLoopEndAbs;
+    }
+    else if (cachedSnapEnabled != snapEnabled)
+    {
+        cachedSnapEnabled = snapEnabled;
+        cachedLoopStartNorm = -1.0f; // invalidate cache
+    }
     int loopLength = loopEndAbs - loopStartAbs;
 
     // Convert crossfade ms to samples, clamp to half loop length
@@ -221,12 +245,14 @@ void AzmariwVoice::setGlideParameters(std::atomic<float>* enabled,
 void AzmariwVoice::setLoopParameters(std::atomic<float>* playbackMode,
                                       std::atomic<float>* loopStart,
                                       std::atomic<float>* loopEnd,
-                                      std::atomic<float>* loopCrossfade)
+                                      std::atomic<float>* loopCrossfade,
+                                      std::atomic<float>* loopSnapToZero)
 {
     playbackModeParam = playbackMode;
     loopStartParam = loopStart;
     loopEndParam = loopEnd;
     loopCrossfadeParam = loopCrossfade;
+    loopSnapToZeroParam = loopSnapToZero;
 }
 
 void AzmariwVoice::prepareToPlay(double sampleRate)

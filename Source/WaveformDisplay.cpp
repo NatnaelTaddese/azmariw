@@ -26,6 +26,25 @@ void WaveformDisplay::setLoopParameters(float start, float end, float fade)
     }
 }
 
+void WaveformDisplay::setSnapEnabled(bool enabled)
+{
+    if (snapEnabled != enabled)
+    {
+        snapEnabled = enabled;
+        repaint();
+    }
+}
+
+void WaveformDisplay::setSnappedPositions(float snappedStartNorm, float snappedEndNorm)
+{
+    if (snappedStart != snappedStartNorm || snappedEnd != snappedEndNorm)
+    {
+        snappedStart = snappedStartNorm;
+        snappedEnd = snappedEndNorm;
+        repaint();
+    }
+}
+
 void WaveformDisplay::timerCallback()
 {
     // Periodically check if we need to refresh
@@ -217,6 +236,40 @@ void WaveformDisplay::paint(juce::Graphics& g)
                           loopEndX - markerSize, bounds.getY(),
                           loopEndX, bounds.getY() + markerSize);
     g.fillPath(endMarker);
+
+    // Draw snapped position indicators (green dashed lines)
+    if (snapEnabled)
+    {
+        float snappedStartX = bounds.getX() + snappedStart * width;
+        float snappedEndX = bounds.getX() + snappedEnd * width;
+
+        g.setColour(juce::Colour(0xff33cc66));
+
+        // Snapped start line
+        float dashLen = 4.0f;
+        for (float y = bounds.getY(); y < bounds.getBottom(); y += dashLen * 2)
+        {
+            float segEnd = juce::jmin(y + dashLen, bounds.getBottom());
+            g.drawVerticalLine(static_cast<int>(snappedStartX), y, segEnd);
+            g.drawVerticalLine(static_cast<int>(snappedEndX), y, segEnd);
+        }
+
+        // Small diamond markers at snapped positions
+        float diamondSize = 5.0f;
+        float midY = centreY;
+
+        juce::Path startDiamond;
+        startDiamond.addTriangle(snappedStartX - diamondSize, midY,
+                                  snappedStartX, midY - diamondSize,
+                                  snappedStartX, midY + diamondSize);
+        g.fillPath(startDiamond);
+
+        juce::Path endDiamond;
+        endDiamond.addTriangle(snappedEndX + diamondSize, midY,
+                                snappedEndX, midY - diamondSize,
+                                snappedEndX, midY + diamondSize);
+        g.fillPath(endDiamond);
+    }
 
     // Border
     g.setColour(juce::Colours::grey.withAlpha(0.5f));

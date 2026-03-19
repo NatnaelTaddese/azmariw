@@ -48,6 +48,7 @@ private:
     juce::GroupComponent loopGroup;
     juce::Slider loopStartKnob, loopEndKnob, loopCrossfadeKnob;
     juce::Label loopStartLabel, loopEndLabel, loopCrossfadeLabel;
+    juce::ToggleButton snapToZeroButton;
 
     // ADSR section
     juce::Slider attackKnob, decayKnob, sustainKnob, releaseKnob;
@@ -87,6 +88,7 @@ private:
     std::unique_ptr<ComboBoxAttachment> playbackModeAttachment;
     std::unique_ptr<SliderAttachment> rootNoteAttachment;
     std::unique_ptr<SliderAttachment> loopStartAttachment, loopEndAttachment, loopCrossfadeAttachment;
+    std::unique_ptr<ButtonAttachment> snapToZeroAttachment;
 
     std::unique_ptr<SliderAttachment> attackAttachment, decayAttachment;
     std::unique_ptr<SliderAttachment> sustainAttachment, releaseAttachment;

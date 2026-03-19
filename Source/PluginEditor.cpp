@@ -66,10 +66,15 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
     setupRotaryKnob(loopEndKnob, loopEndLabel, "End");
     setupRotaryKnob(loopCrossfadeKnob, loopCrossfadeLabel, "Fade");
 
+    // Snap to zero-crossing toggle
+    snapToZeroButton.setButtonText("Zero-X");
+    addAndMakeVisible(snapToZeroButton);
+
     // Update waveform when loop params change
     loopStartKnob.onValueChange = [this]() { updateWaveformDisplay(); };
     loopEndKnob.onValueChange = [this]() { updateWaveformDisplay(); };
     loopCrossfadeKnob.onValueChange = [this]() { updateWaveformDisplay(); };
+    snapToZeroButton.onClick = [this]() { updateWaveformDisplay(); };
 
     // ADSR knobs
     setupRotaryKnob(attackKnob, attackLabel, "Attack");
@@ -117,6 +122,8 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
         audioProcessor.apvts, ParamIDs::loopEnd, loopEndKnob);
     loopCrossfadeAttachment = std::make_unique<SliderAttachment>(
         audioProcessor.apvts, ParamIDs::loopCrossfade, loopCrossfadeKnob);
+    snapToZeroAttachment = std::make_unique<ButtonAttachment>(
+        audioProcessor.apvts, ParamIDs::loopSnapToZero, snapToZeroButton);
 
     attackAttachment = std::make_unique<SliderAttachment>(
         audioProcessor.apvts, ParamIDs::attack, attackKnob);
@@ -207,7 +214,26 @@ void AzmariwAudioProcessorEditor::updateWaveformDisplay()
     float start = audioProcessor.apvts.getRawParameterValue(ParamIDs::loopStart)->load();
     float end = audioProcessor.apvts.getRawParameterValue(ParamIDs::loopEnd)->load();
     float fade = audioProcessor.apvts.getRawParameterValue(ParamIDs::loopCrossfade)->load();
+    bool snap = audioProcessor.apvts.getRawParameterValue(ParamIDs::loopSnapToZero)->load() >= 0.5f;
     waveformDisplay.setLoopParameters(start, end, fade);
+    waveformDisplay.setSnapEnabled(snap);
+
+    // Compute snapped positions for visual feedback
+    if (snap && sampleData != nullptr && sampleData->isLoaded())
+    {
+        int numSamples = sampleData->getBuffer().getNumSamples();
+        int startAbs = static_cast<int>(start * numSamples);
+        int endAbs = static_cast<int>(end * numSamples);
+        int snappedStartAbs = sampleData->findNearestZeroCrossing(startAbs);
+        int snappedEndAbs = sampleData->findNearestZeroCrossing(endAbs);
+        float snappedStartNorm = static_cast<float>(snappedStartAbs) / static_cast<float>(numSamples);
+        float snappedEndNorm = static_cast<float>(snappedEndAbs) / static_cast<float>(numSamples);
+        waveformDisplay.setSnappedPositions(snappedStartNorm, snappedEndNorm);
+    }
+    else
+    {
+        waveformDisplay.setSnappedPositions(start, end);
+    }
 }
 
 //==============================================================================
@@ -288,6 +314,11 @@ void AzmariwAudioProcessorEditor::resized()
     // --- Loop section layout ---
     loopGroup.setBounds(loopArea);
     auto loopInner = loopArea.reduced(10).withTrimmedTop(15);
+
+    // Snap toggle at top of loop section
+    snapToZeroButton.setBounds(loopInner.removeFromTop(24));
+    loopInner.removeFromTop(4);
+
     int loopKnobWidth = loopInner.getWidth() / 3;
     int loopLabelH = 18;
 
