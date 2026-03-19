@@ -1,0 +1,58 @@
+# JUCE framework generated files
+JuceLibraryCode/
+
+# Build outputs
+Builds/
+
+# Dependencies (external libraries)
+Deps/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE/project files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Compiled binaries
+*.dll
+*.vst3
+*.component
+*.appex
+*.aaxplugin
+
+# Build artifacts
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.exe
+*.dylib
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# CMake
+CMakeLists.txt.user
+CMakeCache/
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Temp files
+*~
+*.tmp
+*.log
