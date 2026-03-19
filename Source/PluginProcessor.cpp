@@ -1,27 +1,63 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
 //==============================================================================
 AzmariwAudioProcessor::AzmariwAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
+     : AudioProcessor(BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                       .withInput("Input", juce::AudioChannelSet::stereo(), true)
                       #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
+                       .withOutput("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),
+#else
+     :
 #endif
+       apvts(*this, nullptr, "Parameters", createParameterLayout())
 {
+    // Cache parameter pointers
+    preEqFreqParam = apvts.getRawParameterValue(ParamIDs::preEqFrequency);
+    preEqGainParam = apvts.getRawParameterValue(ParamIDs::preEqGain);
+    preEqQParam = apvts.getRawParameterValue(ParamIDs::preEqQ);
+    crossoverLowMidParam = apvts.getRawParameterValue(ParamIDs::crossoverLowMid);
+    crossoverMidHighParam = apvts.getRawParameterValue(ParamIDs::crossoverMidHigh);
+    driveLowParam = apvts.getRawParameterValue(ParamIDs::driveLow);
+    driveMidParam = apvts.getRawParameterValue(ParamIDs::driveMid);
+    driveHighParam = apvts.getRawParameterValue(ParamIDs::driveHigh);
+    distortionMixParam = apvts.getRawParameterValue(ParamIDs::distortionMix);
+    postEqFreqParam = apvts.getRawParameterValue(ParamIDs::postEqFrequency);
+    postEqGainParam = apvts.getRawParameterValue(ParamIDs::postEqGain);
+    postEqQParam = apvts.getRawParameterValue(ParamIDs::postEqQ);
+    masterGainParam = apvts.getRawParameterValue(ParamIDs::masterGain);
+    sampleSlotParam = apvts.getRawParameterValue(ParamIDs::sampleSlot);
+
+    // ADSR + Glide parameter pointers
+    auto* attackParam = apvts.getRawParameterValue(ParamIDs::attack);
+    auto* decayParam = apvts.getRawParameterValue(ParamIDs::decay);
+    auto* sustainParam = apvts.getRawParameterValue(ParamIDs::sustain);
+    auto* releaseParam = apvts.getRawParameterValue(ParamIDs::release);
+    auto* glideEnabledParam = apvts.getRawParameterValue(ParamIDs::glideEnabled);
+    auto* glideTimeParam = apvts.getRawParameterValue(ParamIDs::glideTime);
+
+    // Add voices
+    for (int i = 0; i < 8; ++i)
+    {
+        auto* voice = new AzmariwVoice();
+        voice->setAdsrParameters(attackParam, decayParam, sustainParam, releaseParam);
+        voice->setGlideParameters(glideEnabledParam, glideTimeParam);
+        synthesiser.addVoice(voice);
+    }
+
+    // Add initial sound (will be updated when samples are loaded)
+    auto* defaultSample = sampleManager.getSampleData(0);
+    synthesiser.addSound(new AzmariwSound(defaultSample));
+
+    // Try to load preset samples from Samples directory next to plugin
+    auto pluginFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+    auto samplesDir = pluginFile.getParentDirectory().getChildFile("Samples");
+    sampleManager.loadPresetSamples(samplesDir);
 }
 
 AzmariwAudioProcessor::~AzmariwAudioProcessor()
@@ -63,13 +99,17 @@ bool AzmariwAudioProcessor::isMidiEffect() const
 
 double AzmariwAudioProcessor::getTailLengthSeconds() const
 {
-    return 0.0;
+    // Return max release time for proper tail handling
+    auto* releaseParam = apvts.getRawParameterValue(ParamIDs::release);
+    if (releaseParam != nullptr)
+        return static_cast<double>(releaseParam->load());
+
+    return 10.0;
 }
 
 int AzmariwAudioProcessor::getNumPrograms()
 {
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    return 1;
 }
 
 int AzmariwAudioProcessor::getCurrentProgram()
@@ -77,48 +117,64 @@ int AzmariwAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void AzmariwAudioProcessor::setCurrentProgram (int index)
+void AzmariwAudioProcessor::setCurrentProgram(int index)
 {
+    juce::ignoreUnused(index);
 }
 
-const juce::String AzmariwAudioProcessor::getProgramName (int index)
+const juce::String AzmariwAudioProcessor::getProgramName(int index)
 {
+    juce::ignoreUnused(index);
     return {};
 }
 
-void AzmariwAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void AzmariwAudioProcessor::changeProgramName(int index, const juce::String& newName)
 {
+    juce::ignoreUnused(index, newName);
 }
 
 //==============================================================================
-void AzmariwAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void AzmariwAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+
+    synthesiser.setCurrentPlaybackSampleRate(sampleRate);
+
+    for (int i = 0; i < synthesiser.getNumVoices(); ++i)
+    {
+        if (auto* voice = dynamic_cast<AzmariwVoice*>(synthesiser.getVoice(i)))
+            voice->prepareToPlay(sampleRate);
+    }
+
+    preEq.prepare(spec);
+    multibandDistortion.prepare(spec);
+    postEq.prepare(spec);
+    masterGain.prepare(spec);
+    masterGain.setRampDurationSeconds(0.02);
 }
 
 void AzmariwAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+    preEq.reset();
+    multibandDistortion.reset();
+    postEq.reset();
+    masterGain.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool AzmariwAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool AzmariwAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+    juce::ignoreUnused(layouts);
     return true;
   #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-    // This checks if the input layout matches the output layout
    #if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
@@ -129,62 +185,110 @@ bool AzmariwAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) 
 }
 #endif
 
-void AzmariwAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void AzmariwAudioProcessor::updateFxParameters()
+{
+    // Update the active sound's sample data based on selected slot
+    int slotIndex = static_cast<int>(sampleSlotParam->load());
+    auto* sampleData = sampleManager.getSampleData(slotIndex);
+
+    if (synthesiser.getNumSounds() > 0)
+    {
+        if (auto* sound = dynamic_cast<AzmariwSound*>(synthesiser.getSound(0).get()))
+            sound->setSampleData(sampleData);
+    }
+
+    // Pre-EQ
+    preEq.updateParameters(preEqFreqParam->load(),
+                           preEqGainParam->load(),
+                           preEqQParam->load());
+
+    // Distortion
+    multibandDistortion.updateParameters(crossoverLowMidParam->load(),
+                                          crossoverMidHighParam->load(),
+                                          driveLowParam->load(),
+                                          driveMidParam->load(),
+                                          driveHighParam->load(),
+                                          distortionMixParam->load());
+
+    // Post-EQ
+    postEq.updateParameters(postEqFreqParam->load(),
+                            postEqGainParam->load(),
+                            postEqQParam->load());
+
+    // Master gain
+    masterGain.setGainDecibels(masterGainParam->load());
+}
+
+void AzmariwAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                          juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+        buffer.clear(i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    // Update all FX parameters from APVTS
+    updateFxParameters();
 
-        // ..do something to the data...
-    }
+    // Clear and render synth voices
+    buffer.clear();
+    synthesiser.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+
+    // Global FX chain
+    juce::dsp::AudioBlock<float> block(buffer);
+
+    // Pre-EQ
+    preEq.process(block);
+
+    // Multiband distortion
+    multibandDistortion.process(buffer);
+
+    // Post-EQ
+    postEq.process(block);
+
+    // Master gain
+    juce::dsp::ProcessContextReplacing<float> gainContext(block);
+    masterGain.process(gainContext);
 }
 
 //==============================================================================
 bool AzmariwAudioProcessor::hasEditor() const
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    return true;
 }
 
 juce::AudioProcessorEditor* AzmariwAudioProcessor::createEditor()
 {
-    return new AzmariwAudioProcessorEditor (*this);
+    return new AzmariwAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void AzmariwAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void AzmariwAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    auto state = apvts.copyState();
+    sampleManager.saveState(state);
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
-void AzmariwAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void AzmariwAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
+    if (xml != nullptr)
+    {
+        auto state = juce::ValueTree::fromXml(*xml);
+        apvts.replaceState(state);
+        sampleManager.loadState(state);
+    }
 }
 
 //==============================================================================
-// This creates new instances of the plugin..
+bool AzmariwAudioProcessor::loadSampleFromFile(int slot, const juce::File& file)
+{
+    return sampleManager.loadUserSample(slot, file);
+}
+
+//==============================================================================
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new AzmariwAudioProcessor();
