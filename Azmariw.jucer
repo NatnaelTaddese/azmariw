@@ -13,6 +13,38 @@
       <FILE id="Ml2Paz" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="O9u1PY" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="Pp01aa" name="PluginParameters.h" compile="0" resource="0"
+            file="Source/PluginParameters.h"/>
+      <FILE id="Sd01aa" name="SampleData.h" compile="0" resource="0"
+            file="Source/SampleData.h"/>
+      <FILE id="Sd01ab" name="SampleData.cpp" compile="1" resource="0"
+            file="Source/SampleData.cpp"/>
+      <FILE id="Sm01aa" name="SampleManager.h" compile="0" resource="0"
+            file="Source/SampleManager.h"/>
+      <FILE id="Sm01ab" name="SampleManager.cpp" compile="1" resource="0"
+            file="Source/SampleManager.cpp"/>
+      <FILE id="As01aa" name="AzmariwSound.h" compile="0" resource="0"
+            file="Source/AzmariwSound.h"/>
+      <FILE id="Ae01aa" name="AdsrEnvelope.h" compile="0" resource="0"
+            file="Source/AdsrEnvelope.h"/>
+      <FILE id="Ae01ab" name="AdsrEnvelope.cpp" compile="1" resource="0"
+            file="Source/AdsrEnvelope.cpp"/>
+      <FILE id="Gp01aa" name="GlideProcessor.h" compile="0" resource="0"
+            file="Source/GlideProcessor.h"/>
+      <FILE id="Gp01ab" name="GlideProcessor.cpp" compile="1" resource="0"
+            file="Source/GlideProcessor.cpp"/>
+      <FILE id="Av01aa" name="AzmariwVoice.h" compile="0" resource="0"
+            file="Source/AzmariwVoice.h"/>
+      <FILE id="Av01ab" name="AzmariwVoice.cpp" compile="1" resource="0"
+            file="Source/AzmariwVoice.cpp"/>
+      <FILE id="Pe01aa" name="ParametricEq.h" compile="0" resource="0"
+            file="Source/ParametricEq.h"/>
+      <FILE id="Pe01ab" name="ParametricEq.cpp" compile="1" resource="0"
+            file="Source/ParametricEq.cpp"/>
+      <FILE id="Mw01aa" name="MultibandWaveshaper.h" compile="0" resource="0"
+            file="Source/MultibandWaveshaper.h"/>
+      <FILE id="Mw01ab" name="MultibandWaveshaper.cpp" compile="1" resource="0"
+            file="Source/MultibandWaveshaper.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>
@@ -27,6 +59,7 @@
     <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
@@ -49,6 +82,7 @@
         <MODULEPATH id="juce_audio_utils" path="../../../../src/JUCE/modules"/>
         <MODULEPATH id="juce_core" path="../../../../src/JUCE/modules"/>
         <MODULEPATH id="juce_data_structures" path="../../../../src/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../../../../src/JUCE/modules"/>
         <MODULEPATH id="juce_events" path="../../../../src/JUCE/modules"/>
         <MODULEPATH id="juce_graphics" path="../../../../src/JUCE/modules"/>
         <MODULEPATH id="juce_gui_basics" path="../../../../src/JUCE/modules"/>
