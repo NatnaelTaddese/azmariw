@@ -39,6 +39,11 @@ private:
     juce::Label dropZoneLabel;
     juce::Label slotLabel, modeLabel;
 
+    // Loop controls
+    juce::GroupComponent loopGroup;
+    juce::Slider loopStartKnob, loopEndKnob, loopCrossfadeKnob;
+    juce::Label loopStartLabel, loopEndLabel, loopCrossfadeLabel;
+
     // ADSR section
     juce::Slider attackKnob, decayKnob, sustainKnob, releaseKnob;
     juce::Label attackLabel, decayLabel, sustainLabel, releaseLabel;
@@ -76,6 +81,7 @@ private:
     std::unique_ptr<ComboBoxAttachment> sampleSlotAttachment;
     std::unique_ptr<ComboBoxAttachment> playbackModeAttachment;
     std::unique_ptr<SliderAttachment> rootNoteAttachment;
+    std::unique_ptr<SliderAttachment> loopStartAttachment, loopEndAttachment, loopCrossfadeAttachment;
 
     std::unique_ptr<SliderAttachment> attackAttachment, decayAttachment;
     std::unique_ptr<SliderAttachment> sustainAttachment, releaseAttachment;

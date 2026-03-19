@@ -41,12 +41,19 @@ AzmariwAudioProcessor::AzmariwAudioProcessor()
     auto* glideEnabledParam = apvts.getRawParameterValue(ParamIDs::glideEnabled);
     auto* glideTimeParam = apvts.getRawParameterValue(ParamIDs::glideTime);
 
+    // Loop parameter pointers
+    auto* playbackModeParam = apvts.getRawParameterValue(ParamIDs::playbackMode);
+    auto* loopStartParam = apvts.getRawParameterValue(ParamIDs::loopStart);
+    auto* loopEndParam = apvts.getRawParameterValue(ParamIDs::loopEnd);
+    auto* loopCrossfadeParam = apvts.getRawParameterValue(ParamIDs::loopCrossfade);
+
     // Add voices
     for (int i = 0; i < 8; ++i)
     {
         auto* voice = new AzmariwVoice();
         voice->setAdsrParameters(attackParam, decayParam, sustainParam, releaseParam);
         voice->setGlideParameters(glideEnabledParam, glideTimeParam);
+        voice->setLoopParameters(playbackModeParam, loopStartParam, loopEndParam, loopCrossfadeParam);
         synthesiser.addVoice(voice);
     }
 

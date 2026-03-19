@@ -15,6 +15,7 @@ void AzmariwVoice::startNote(int midiNoteNumber, float vel,
 {
     velocity = vel;
     playbackPosition = 0.0;
+    hasCompletedFirstPass = false;
 
     auto* azmariwSound = dynamic_cast<AzmariwSound*>(sound);
     if (azmariwSound == nullptr)
@@ -54,6 +55,7 @@ void AzmariwVoice::stopNote(float /*vel*/, bool allowTailOff)
         adsrEnvelope.reset();
         clearCurrentNote();
         noteWasPlaying = false;
+        hasCompletedFirstPass = false;
         playbackPosition = 0.0;
     }
 }
@@ -64,6 +66,23 @@ void AzmariwVoice::pitchWheelMoved(int /*newPitchWheelValue*/)
 
 void AzmariwVoice::controllerMoved(int /*controllerNumber*/, int /*newControllerValue*/)
 {
+}
+
+float AzmariwVoice::getInterpolatedSample(const juce::AudioBuffer<float>& buffer,
+                                           int channel, double position, int numSamples) const
+{
+    auto pos = static_cast<int>(position);
+    auto frac = static_cast<float>(position - pos);
+
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+
+    if (pos >= 0 && pos < numSamples)
+        s0 = buffer.getSample(channel, pos);
+    if (pos + 1 >= 0 && pos + 1 < numSamples)
+        s1 = buffer.getSample(channel, pos + 1);
+
+    return s0 + frac * (s1 - s0);
 }
 
 void AzmariwVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
@@ -82,12 +101,23 @@ void AzmariwVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     auto numChannels = sampleBuffer.getNumChannels();
     auto sourceSampleRate = sampleData->getSourceSampleRate();
     auto rootNote = sampleData->getRootNote();
-    bool loopEnabled = sampleData->isLoopEnabled();
-    int loopStart = sampleData->getLoopStart();
-    int loopEnd = sampleData->getLoopEnd();
 
-    if (loopEnd <= 0)
-        loopEnd = sampleLength;
+    // Read loop parameters from APVTS
+    bool loopEnabled = (playbackModeParam != nullptr && playbackModeParam->load() >= 0.5f);
+    float loopStartNorm = (loopStartParam != nullptr) ? loopStartParam->load() : 0.0f;
+    float loopEndNorm = (loopEndParam != nullptr) ? loopEndParam->load() : 1.0f;
+    float crossfadeMs = (loopCrossfadeParam != nullptr) ? loopCrossfadeParam->load() : 20.0f;
+
+    // Convert normalized positions to absolute sample indices
+    int loopStartAbs = static_cast<int>(loopStartNorm * sampleLength);
+    int loopEndAbs = static_cast<int>(loopEndNorm * sampleLength);
+    loopStartAbs = juce::jlimit(0, sampleLength - 1, loopStartAbs);
+    loopEndAbs = juce::jlimit(loopStartAbs + 1, sampleLength, loopEndAbs);
+    int loopLength = loopEndAbs - loopStartAbs;
+
+    // Convert crossfade ms to samples, clamp to half loop length
+    int crossfadeSamples = static_cast<int>((crossfadeMs / 1000.0f) * static_cast<float>(getSampleRate()));
+    crossfadeSamples = juce::jmin(crossfadeSamples, loopLength / 2);
 
     if (attackParam != nullptr)
         adsrEnvelope.updateParameters(attackParam, decayParam, sustainParam, releaseParam);
@@ -106,35 +136,59 @@ void AzmariwVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         float currentFreq = glideProcessor.getNextFrequency();
         double pitchRatio = (currentFreq / rootFreq) * (sourceSampleRate / getSampleRate());
 
-        auto pos = static_cast<int>(playbackPosition);
-        auto frac = static_cast<float>(playbackPosition - pos);
-
         float envelopeValue = adsrEnvelope.getNextSample();
 
         for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
         {
             int srcChannel = juce::jmin(channel, numChannels - 1);
+            float outputSample;
 
-            float sample0 = 0.0f;
-            float sample1 = 0.0f;
+            if (loopEnabled && crossfadeSamples > 0)
+            {
+                float distanceToEnd = static_cast<float>(loopEndAbs - playbackPosition);
 
-            if (pos >= 0 && pos < sampleLength)
-                sample0 = sampleBuffer.getSample(srcChannel, pos);
-            if (pos + 1 >= 0 && pos + 1 < sampleLength)
-                sample1 = sampleBuffer.getSample(srcChannel, pos + 1);
+                if (distanceToEnd < crossfadeSamples && distanceToEnd >= 0.0f)
+                {
+                    // Inside crossfade region — blend outgoing with incoming
+                    float fadeProgress = 1.0f - (distanceToEnd / static_cast<float>(crossfadeSamples));
+                    float fadeOut = std::sqrt(1.0f - fadeProgress);
+                    float fadeIn = std::sqrt(fadeProgress);
 
-            float interpolated = sample0 + frac * (sample1 - sample0);
+                    float outgoing = getInterpolatedSample(sampleBuffer, srcChannel,
+                                                           playbackPosition, sampleLength);
+                    double incomingPos = static_cast<double>(loopStartAbs) +
+                                         (static_cast<double>(crossfadeSamples) - distanceToEnd);
+                    float incoming = getInterpolatedSample(sampleBuffer, srcChannel,
+                                                           incomingPos, sampleLength);
+
+                    outputSample = outgoing * fadeOut + incoming * fadeIn;
+                }
+                else
+                {
+                    outputSample = getInterpolatedSample(sampleBuffer, srcChannel,
+                                                          playbackPosition, sampleLength);
+                }
+            }
+            else
+            {
+                outputSample = getInterpolatedSample(sampleBuffer, srcChannel,
+                                                      playbackPosition, sampleLength);
+            }
+
             outputBuffer.addSample(channel, startSample + sample,
-                                   interpolated * velocity * envelopeValue);
+                                   outputSample * velocity * envelopeValue);
         }
 
         playbackPosition += pitchRatio;
 
         if (loopEnabled)
         {
-            if (playbackPosition >= loopEnd)
-                playbackPosition = loopStart + std::fmod(playbackPosition - loopStart,
-                                                          loopEnd - loopStart);
+            if (playbackPosition >= loopEndAbs)
+            {
+                playbackPosition = loopStartAbs + std::fmod(playbackPosition - loopStartAbs,
+                                                             static_cast<double>(loopLength));
+                hasCompletedFirstPass = true;
+            }
         }
         else
         {
@@ -162,6 +216,17 @@ void AzmariwVoice::setGlideParameters(std::atomic<float>* enabled,
 {
     glideEnabledParam = enabled;
     glideTimeParam = time;
+}
+
+void AzmariwVoice::setLoopParameters(std::atomic<float>* playbackMode,
+                                      std::atomic<float>* loopStart,
+                                      std::atomic<float>* loopEnd,
+                                      std::atomic<float>* loopCrossfade)
+{
+    playbackModeParam = playbackMode;
+    loopStartParam = loopStart;
+    loopEndParam = loopEnd;
+    loopCrossfadeParam = loopCrossfade;
 }
 
 void AzmariwVoice::prepareToPlay(double sampleRate)
