@@ -5,7 +5,7 @@
 AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    setSize(1020, 520);
+    setSize(1020, 620);
 
     // Group components
     samplerGroup.setText("Sampler");
@@ -32,6 +32,9 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
                             juce::Colours::black.withAlpha(0.2f));
     addAndMakeVisible(dropZoneLabel);
 
+    // Waveform display
+    addAndMakeVisible(waveformDisplay);
+
     // Sample slot combobox
     slotLabel.setText("Slot:", juce::dontSendNotification);
     slotLabel.setJustificationType(juce::Justification::centredRight);
@@ -41,7 +44,7 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
         sampleSlotBox.addItem("Slot " + juce::String(i + 1), i + 1);
     addAndMakeVisible(sampleSlotBox);
 
-    sampleSlotBox.onChange = [this]() { updateDropZoneText(); };
+    sampleSlotBox.onChange = [this]() { updateDropZoneText(); updateWaveformDisplay(); };
 
     // Playback mode combobox
     modeLabel.setText("Mode:", juce::dontSendNotification);
@@ -62,6 +65,11 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
     setupRotaryKnob(loopStartKnob, loopStartLabel, "Start");
     setupRotaryKnob(loopEndKnob, loopEndLabel, "End");
     setupRotaryKnob(loopCrossfadeKnob, loopCrossfadeLabel, "Fade");
+
+    // Update waveform when loop params change
+    loopStartKnob.onValueChange = [this]() { updateWaveformDisplay(); };
+    loopEndKnob.onValueChange = [this]() { updateWaveformDisplay(); };
+    loopCrossfadeKnob.onValueChange = [this]() { updateWaveformDisplay(); };
 
     // ADSR knobs
     setupRotaryKnob(attackKnob, attackLabel, "Attack");
@@ -155,6 +163,7 @@ AzmariwAudioProcessorEditor::AzmariwAudioProcessorEditor(AzmariwAudioProcessor& 
         audioProcessor.apvts, ParamIDs::masterGain, masterGainKnob);
 
     updateDropZoneText();
+    updateWaveformDisplay();
 }
 
 AzmariwAudioProcessorEditor::~AzmariwAudioProcessorEditor()
@@ -188,6 +197,19 @@ void AzmariwAudioProcessorEditor::updateDropZoneText()
         dropZoneLabel.setText("Drop WAV/AIFF here", juce::dontSendNotification);
 }
 
+void AzmariwAudioProcessorEditor::updateWaveformDisplay()
+{
+    int slot = static_cast<int>(
+        audioProcessor.apvts.getRawParameterValue(ParamIDs::sampleSlot)->load());
+    auto* sampleData = audioProcessor.getSampleManager().getSampleData(slot);
+    waveformDisplay.setSampleData(sampleData);
+
+    float start = audioProcessor.apvts.getRawParameterValue(ParamIDs::loopStart)->load();
+    float end = audioProcessor.apvts.getRawParameterValue(ParamIDs::loopEnd)->load();
+    float fade = audioProcessor.apvts.getRawParameterValue(ParamIDs::loopCrossfade)->load();
+    waveformDisplay.setLoopParameters(start, end, fade);
+}
+
 //==============================================================================
 void AzmariwAudioProcessorEditor::paint(juce::Graphics& g)
 {
@@ -212,6 +234,10 @@ void AzmariwAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
     bounds.removeFromTop(40); // title area
+
+    // Waveform display row
+    auto waveformArea = bounds.removeFromTop(100).reduced(8, 4);
+    waveformDisplay.setBounds(waveformArea);
 
     auto topRow = bounds.removeFromTop(220);
     auto bottomRow = bounds.reduced(0, 4);
@@ -382,6 +408,7 @@ void AzmariwAudioProcessorEditor::filesDropped(const juce::StringArray& files,
                 audioProcessor.apvts.getRawParameterValue(ParamIDs::sampleSlot)->load());
             audioProcessor.loadSampleFromFile(slot, file);
             updateDropZoneText();
+            updateWaveformDisplay();
             break;
         }
     }

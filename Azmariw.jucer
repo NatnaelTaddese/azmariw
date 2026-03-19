@@ -45,6 +45,10 @@
             file="Source/MultibandWaveshaper.h"/>
       <FILE id="Mw01ab" name="MultibandWaveshaper.cpp" compile="1" resource="0"
             file="Source/MultibandWaveshaper.cpp"/>
+      <FILE id="Wd01aa" name="WaveformDisplay.h" compile="0" resource="0"
+            file="Source/WaveformDisplay.h"/>
+      <FILE id="Wd01ab" name="WaveformDisplay.cpp" compile="1" resource="0"
+            file="Source/WaveformDisplay.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

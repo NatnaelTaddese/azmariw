@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "PluginParameters.h"
+#include "WaveformDisplay.h"
 
 class AzmariwAudioProcessorEditor : public juce::AudioProcessorEditor,
                                      public juce::FileDragAndDropTarget
@@ -23,6 +24,7 @@ public:
 private:
     void setupRotaryKnob(juce::Slider& slider, juce::Label& label, const juce::String& labelText);
     void updateDropZoneText();
+    void updateWaveformDisplay();
 
     AzmariwAudioProcessor& audioProcessor;
     bool dragOver = false;
@@ -38,6 +40,9 @@ private:
     juce::Label rootNoteLabel;
     juce::Label dropZoneLabel;
     juce::Label slotLabel, modeLabel;
+
+    // Waveform display
+    WaveformDisplay waveformDisplay;
 
     // Loop controls
     juce::GroupComponent loopGroup;
