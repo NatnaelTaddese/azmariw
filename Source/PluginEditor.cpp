@@ -255,13 +255,15 @@ void AzmariwAudioProcessorEditor::updateWaveformDisplay()
 //==============================================================================
 void AzmariwAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    // Background PNG
+    auto bgImage = juce::ImageCache::getFromMemory(
+        BinaryData::background_png, BinaryData::background_pngSize);
+    g.drawImage(bgImage, getLocalBounds().toFloat());
 
-    // Title
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions(22.0f).withStyle("Bold")));
-    g.drawText("AZMARIW", getLocalBounds().removeFromTop(40),
-               juce::Justification::centred, true);
+    // Border PNG (drawn on top)
+    auto borderImage = juce::ImageCache::getFromMemory(
+        BinaryData::border_png, BinaryData::border_pngSize);
+    g.drawImage(borderImage, getLocalBounds().toFloat());
 
     // Drop zone highlight when dragging
     if (dragOver)
