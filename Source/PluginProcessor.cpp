@@ -26,7 +26,8 @@ AzmariwAudioProcessor::AzmariwAudioProcessor()
     driveLowParam = apvts.getRawParameterValue(ParamIDs::driveLow);
     driveMidParam = apvts.getRawParameterValue(ParamIDs::driveMid);
     driveHighParam = apvts.getRawParameterValue(ParamIDs::driveHigh);
-    distortionMixParam = apvts.getRawParameterValue(ParamIDs::distortionMix);
+    distortionMixParam  = apvts.getRawParameterValue(ParamIDs::distortionMix);
+    distortionTypeParam = apvts.getRawParameterValue(ParamIDs::distortionType);
     postEqFreqParam = apvts.getRawParameterValue(ParamIDs::postEqFrequency);
     postEqGainParam = apvts.getRawParameterValue(ParamIDs::postEqGain);
     postEqQParam = apvts.getRawParameterValue(ParamIDs::postEqQ);
@@ -216,7 +217,8 @@ void AzmariwAudioProcessor::updateFxParameters()
                                           driveLowParam->load(),
                                           driveMidParam->load(),
                                           driveHighParam->load(),
-                                          distortionMixParam->load());
+                                          distortionMixParam->load(),
+                                          static_cast<int>(distortionTypeParam->load()));
 
     // Post-EQ
     postEq.updateParameters(postEqFreqParam->load(),

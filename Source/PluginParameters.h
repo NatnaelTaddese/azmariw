@@ -35,6 +35,7 @@ namespace ParamIDs
     inline constexpr auto driveMid         = "driveMid";
     inline constexpr auto driveHigh        = "driveHigh";
     inline constexpr auto distortionMix    = "distortionMix";
+    inline constexpr auto distortionType   = "distortionType";
 
     // Post-EQ
     inline constexpr auto postEqFrequency = "postEqFrequency";
@@ -139,6 +140,10 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ParamIDs::distortionMix, 1}, "Distortion Mix",
         juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.5f));
+
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        juce::ParameterID{ParamIDs::distortionType, 1}, "Distortion Type",
+        juce::StringArray{"Soft", "Tube", "Hard", "Amp", "Fuzz", "Fold"}, 0));
 
     // Post-EQ
     layout.add(std::make_unique<juce::AudioParameterFloat>(

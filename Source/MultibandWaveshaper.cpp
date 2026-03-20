@@ -25,7 +25,7 @@ void MultibandWaveshaper::prepare(const juce::dsp::ProcessSpec& spec)
 
 void MultibandWaveshaper::updateParameters(float crossoverLowMid, float crossoverMidHigh,
                                             float driveLow, float driveMid, float driveHigh,
-                                            float mix)
+                                            float mix, int distortionType)
 {
     lowMidLP.setCutoffFrequency(crossoverLowMid);
     lowMidHP.setCutoffFrequency(crossoverLowMid);
@@ -36,16 +36,60 @@ void MultibandWaveshaper::updateParameters(float crossoverLowMid, float crossove
     currentDriveMid = driveMid;
     currentDriveHigh = driveHigh;
     currentMix = mix;
+    currentDistortionType = distortionType;
 }
 
-float MultibandWaveshaper::waveshape(float input, float drive)
+float MultibandWaveshaper::waveshape(float input, float drive, int distortionType)
 {
     if (drive <= 0.001f)
         return input;
 
     // Map 0-1 drive to 1-50 multiplier (exponential for musical feel)
     float driveAmount = 1.0f + drive * drive * 49.0f;
-    return std::tanh(driveAmount * input);
+    float x = driveAmount * input;
+
+    switch (distortionType)
+    {
+        // 0: Soft (Tanh) — smooth saturation
+        default:
+        case 0:
+            return std::tanh(x);
+
+        // 1: Tube — asymmetric soft clipping, even harmonics like a triode
+        case 1:
+            if (x >= 0.0f)
+                return std::tanh(x);
+            else
+                return std::tanh(x * 0.7f) * 1.2f;
+
+        // 2: Hard — hard clip at ±1.0
+        case 2:
+            return juce::jlimit(-1.0f, 1.0f, x);
+
+        // 3: Amp — polynomial waveshaper, asymmetric soft knee
+        case 3:
+        {
+            float clipped = juce::jlimit(-2.0f, 2.0f, x);
+            if (clipped >= 0.0f)
+                return clipped - (clipped * clipped * clipped) / 3.0f;
+            else
+                return clipped - (clipped * clipped * clipped * clipped) / 4.0f;
+        }
+
+        // 4: Fuzz — hard clip with drive-scaled DC offset for asymmetric character
+        case 4:
+        {
+            float offset = 0.3f * driveAmount * 0.02f;
+            return juce::jlimit(-1.0f, 1.0f, x + offset);
+        }
+
+        // 5: Fold — wavefolding using analytic triangle-wave formula
+        case 5:
+        {
+            constexpr float pi = juce::MathConstants<float>::pi;
+            return (2.0f / pi) * std::asin(std::sin(x * pi * 0.5f));
+        }
+    }
 }
 
 void MultibandWaveshaper::process(juce::AudioBuffer<float>& buffer)
@@ -94,9 +138,9 @@ void MultibandWaveshaper::process(juce::AudioBuffer<float>& buffer)
 
         for (int i = 0; i < numSamples; ++i)
         {
-            float wet = waveshape(lowData[i], currentDriveLow)
-                      + waveshape(midData[i], currentDriveMid)
-                      + waveshape(highData[i], currentDriveHigh);
+            float wet = waveshape(lowData[i],  currentDriveLow,  currentDistortionType)
+                      + waveshape(midData[i],  currentDriveMid,  currentDistortionType)
+                      + waveshape(highData[i], currentDriveHigh, currentDistortionType);
 
             outData[i] = dryData[i] * (1.0f - currentMix) + wet * currentMix;
         }

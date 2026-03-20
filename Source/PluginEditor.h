@@ -64,6 +64,8 @@ private:
     juce::Label preEqFreqLabel, preEqGainLabel, preEqQLabel;
 
     // Distortion section
+    juce::ComboBox distortionTypeBox;
+    juce::Label distortionTypeLabel;
     juce::Slider crossoverLowMidKnob, crossoverMidHighKnob;
     juce::Slider driveLowKnob, driveMidKnob, driveHighKnob;
     juce::Slider distortionMixKnob;
@@ -101,6 +103,7 @@ private:
     std::unique_ptr<SliderAttachment> crossoverLowMidAttachment, crossoverMidHighAttachment;
     std::unique_ptr<SliderAttachment> driveLowAttachment, driveMidAttachment, driveHighAttachment;
     std::unique_ptr<SliderAttachment> distortionMixAttachment;
+    std::unique_ptr<ComboBoxAttachment> distortionTypeAttachment;
 
     std::unique_ptr<SliderAttachment> postEqFreqAttachment, postEqGainAttachment, postEqQAttachment;
 
