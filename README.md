@@ -1,6 +1,6 @@
 # Azmariw
 
-A JUCE-based VST3 audio plugin synthesizer.
+Azmariw is a JUCE-based VST3 audio plugin synthesizer focused on creating authentic Ethiopian instrument sounds. The project aims to bring the character, tone, and musical feel of traditional Ethiopian instruments into modern digital audio workstations.
 
 ## Prerequisites
 
